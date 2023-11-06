@@ -1,13 +1,15 @@
 package event
 
-class EventStore {
-    private val events = mutableListOf<MovingItemEvent>()
+import java.util.concurrent.BlockingQueue
+
+class EventStore(private val queue: BlockingQueue<MovingItemEvent>) {
 
     fun saveEvent(event: MovingItemEvent) {
-        events.add(event)
+        queue.put(event)
     }
-
-    fun getEventsForAggregate(id: String): List<MovingItemEvent> {
-        return events.filter { it.id == id }
+    fun getAllEvents(): List<MovingItemEvent> {
+        val events = mutableListOf<MovingItemEvent>()
+        queue.drainTo(events)
+        return events
     }
 }

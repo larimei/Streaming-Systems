@@ -1,5 +1,10 @@
 package read
 
-class MovingItemDto {
-    val test = ""
-}
+import Vector
+
+data class MovingItemDTO(
+    val name: String,
+    val location: Vector,
+    val numberOfMoves: Int,
+    val value: Int
+)

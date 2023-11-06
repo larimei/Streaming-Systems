@@ -16,14 +16,14 @@ class CommandImpl(private val commandHandler: CommandHandler) : Commands {
     }
 
     override fun deleteItem(id: String) {
-        commandHandler.handle(DeleteItemCommand())
+        commandHandler.handle(DeleteItemCommand(id))
     }
 
     override fun moveItem(id: String, vector: Vector) {
-        commandHandler.handle(MoveItemCommand())
+        commandHandler.handle(MoveItemCommand(id, vector))
     }
 
     override fun changeValue(id: String, newValue: Int) {
-        commandHandler.handle(ChangeValueCommand())
+        commandHandler.handle(ChangeValueCommand(id, newValue))
     }
 }

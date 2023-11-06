@@ -1,41 +1,21 @@
 package read
 
+import Vector
 import event.*
-import write.aggregate.MovingItemAggregate
 
-class QueryHandler(private val eventStore: EventStore) {
-    private val movingItems = mutableListOf<MovingItemAggregate>() // MovingItemDto
+class QueryHandler(private val queryModel: MutableMap<String, MovingItemDTO>) : Query {
 
-    fun handleEvents(events: List<MovingItemEvent>) {
-        for (event in events) {
-            when (event) {
-                is ItemCreatedEvent -> {
-                    movingItems.add(MovingItemAggregate(event.id, event.position, event.value))
-                }
+    override fun getMovingItemByName(name: String): MovingItemDTO {
+        return queryModel[name] ?: throw NoSuchElementException("No MovingItem found with name: $name")
+    }
 
-                is ItemMovedEvent -> {
-                    val movingItemIndex = movingItems.indexOfFirst { it.id == event.id }
-                    if (movingItemIndex != -1) {
-                        val currentMovingItem = movingItems[movingItemIndex]
-                        movingItems[movingItemIndex] = MovingItemAggregate(
-                            currentMovingItem.id, currentMovingItem.location.add(event.vector), currentMovingItem.value
-                        )
-                    }
-                }
+    override fun getMovingItems(): List<MovingItemDTO> {
+        return queryModel.values.toList()
+    }
 
-                is ItemValueChangedEvent -> {
-                    val movingItemIndex = movingItems.indexOfFirst { it.id == event.id }
-                    if (movingItemIndex != -1) {
-                        val currentMovingItem = movingItems[movingItemIndex]
-                        movingItems[movingItemIndex] =
-                            MovingItemAggregate(currentMovingItem.id, currentMovingItem.location, event.value)
-                    }
-                }
-
-                is ItemDeletedEvent -> {
-                    movingItems.remove(movingItems.find { it.id == event.id })
-                }
-            }
+    override fun getMovingItemsAtPosition(position: Vector): List<MovingItemDTO> {
+        return queryModel.values.filter { dto ->
+            dto.location == position
         }
     }
 }
