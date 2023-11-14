@@ -1,4 +1,3 @@
-import event.EventStore
 import event.EventStoreImpl
 import event.MovingItemEvent
 import projection.ProjectionHandler
