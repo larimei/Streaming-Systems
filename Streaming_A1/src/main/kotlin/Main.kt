@@ -15,8 +15,6 @@ fun main(args: Array<String>) {
     val domainItems = mutableMapOf<String, MovingItemImpl>()
     val commandHandler = CommandHandler(eventStore, domainItems)
     val commandImpl = CommandImpl(commandHandler)
-    val queryModel = mutableMapOf<String, MovingItemDTO>()
-    val projectionHandler = ProjectionHandler(eventStore, queryModel)
 
     for (i in 1..6) {
         commandImpl.createItem(i.toString())
@@ -26,6 +24,9 @@ fun main(args: Array<String>) {
             commandImpl.moveItem(i.toString(), randomValues)
         }
     }
+
+    val queryModel = mutableMapOf<String, MovingItemDTO>()
+    val projectionHandler = ProjectionHandler(eventStore, queryModel)
 
     projectionHandler.projectEvents()
 
