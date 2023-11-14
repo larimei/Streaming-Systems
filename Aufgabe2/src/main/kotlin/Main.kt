@@ -30,6 +30,17 @@ fun main(args: Array<String>) {
         commandImpl.moveItem("7", randomValues)
     }
 
+    val vector = Vector(8, 8, 8)
+
+    commandImpl.createItem("8")
+    commandImpl.moveItem("8", vector)
+
+    commandImpl.createItem("9")
+    commandImpl.moveItem("9", vector)
+
+    commandImpl.createItem("10")
+    commandImpl.moveItem("10", vector)
+
     val queryModel = mutableMapOf<String, MovingItemDTO>()
     val projectionHandler = ProjectionHandler(eventStore, queryModel)
 

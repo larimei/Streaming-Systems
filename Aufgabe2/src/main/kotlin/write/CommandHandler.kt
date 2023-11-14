@@ -1,6 +1,7 @@
 package write
 
 import MovingItemImpl
+import Vector
 import event.*
 import write.command.ChangeValueCommand
 import write.command.CreateItemCommand
@@ -52,7 +53,24 @@ class CommandHandler(private val eventStore: EventStore, private val domainItems
             this.handle(DeleteItemCommand(moveItemCommand.id))
             return
         }
+
+        if (moveItemCommand.vector != Vector(0,0,0)) {
+
+            val itemsAtSamePosition = domainItems.filterValues { value ->
+                value.getLocation() == item.getLocation().add(moveItemCommand.vector)
+            }
+
+            if (itemsAtSamePosition.isNotEmpty()) {
+                println("Already one item at this postion - will be deleted")
+                itemsAtSamePosition.forEach{(key,value) ->
+                    this.handle(DeleteItemCommand(key))
+                }
+            }
+        }
+
         item.move(moveItemCommand.vector)
+
+
         domainItems[moveItemCommand.id] = item
 
         eventStore.saveEvent(ItemMovedEvent(moveItemCommand.id, moveItemCommand.vector))
