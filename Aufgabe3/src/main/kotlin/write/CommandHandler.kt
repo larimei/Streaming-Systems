@@ -2,14 +2,20 @@ package write
 
 import MovingItemImpl
 import Vector
+import activemq.ActiveMQConnectionFactory
 import event.*
 import write.command.ChangeValueCommand
 import write.command.CreateItemCommand
 import write.command.DeleteItemCommand
 import write.command.MoveItemCommand
+import javax.jms.Connection
+import javax.jms.Session
 
-class CommandHandler(private val eventStore: EventStore, private val domainItems: MutableMap<String, MovingItemImpl>) {
 
+class CommandHandler(
+    private val eventStore: EventStore,
+    private val domainItems: MutableMap<String, MovingItemImpl>
+) {
     fun handle(createItemCommand: CreateItemCommand) {
         if(createItemCommand.id in domainItems) {
             println("Already exists")

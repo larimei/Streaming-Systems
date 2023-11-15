@@ -3,16 +3,13 @@ package projection
 import event.*
 import read.MovingItemDTO
 
-class ProjectionHandler(private val eventStore: EventStore, private val queryModel: MutableMap<String, MovingItemDTO>) {
-    fun projectEvents() {
-        val allEvents = eventStore.getAllEvents()
-        allEvents.forEach { event ->
-            when (event) {
-                is ItemCreatedEvent -> handleCreatedEvent(event)
-                is ItemMovedEvent -> handleMovedEvent(event)
-                is ItemValueChangedEvent -> handleValueChangedEvent(event)
-                is ItemDeletedEvent -> handleDeletedEvent(event)
-            }
+class ProjectionHandler(private val queryModel: MutableMap<String, MovingItemDTO>) {
+    fun projectEvent(event: MovingItemEvent) {
+        when (event) {
+            is ItemCreatedEvent -> handleCreatedEvent(event)
+            is ItemMovedEvent -> handleMovedEvent(event)
+            is ItemValueChangedEvent -> handleValueChangedEvent(event)
+            is ItemDeletedEvent -> handleDeletedEvent(event)
         }
     }
 

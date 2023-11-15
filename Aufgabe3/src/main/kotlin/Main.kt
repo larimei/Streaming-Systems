@@ -1,57 +1,78 @@
+import AppConfig.ITEM_COUNT
+import AppConfig.MAX_MOVES
+import activemq.ActiveMQConnectionFactory
+import activemq.ActiveMQEventConsumer
 import event.EventStoreImpl
-import event.MovingItemEvent
 import projection.ProjectionHandler
 import read.MovingItemDTO
 import read.QueryHandler
 import write.CommandHandler
 import write.CommandImpl
-import java.util.concurrent.LinkedBlockingQueue
+import javax.jms.Connection
 import kotlin.random.Random
 
-fun main(args: Array<String>) {
-    val eventQueue = LinkedBlockingQueue<MovingItemEvent>()
-    val eventStore = EventStoreImpl(eventQueue)
+fun main() {
+    val connectionProducer = ActiveMQConnectionFactory.instance.createConnection().apply { start() }
+    val connectionConsumer = ActiveMQConnectionFactory.instance.createConnection().apply { start() }
+    try {
+        val commandImpl = initializeCommandSide(connectionProducer)
+        val (queryHandler, queryModel) = initializeQuerySide()
+        val projectionHandler = ProjectionHandler(queryModel)
+        startConsumer(connectionConsumer, projectionHandler)
+
+        processItems(commandImpl, ITEM_COUNT, MAX_MOVES)
+
+        printQueryResults(queryHandler)
+    } finally {
+        connectionConsumer.close()
+        connectionProducer.close()
+    }
+}
+
+fun initializeCommandSide(connectionProducer: Connection): CommandImpl {
+    val eventStore = EventStoreImpl(connectionProducer)
     val domainItems = mutableMapOf<String, MovingItemImpl>()
     val commandHandler = CommandHandler(eventStore, domainItems)
-    val commandImpl = CommandImpl(commandHandler)
+    return CommandImpl(commandHandler)
+}
 
-    for (i in 1..6) {
-        commandImpl.createItem(i.toString())
-        val randomMoveCount = Random.nextInt(1,5)
-        for (j in 1..randomMoveCount) {
-            val randomValues = Vector(Random.nextInt(0,5), Random.nextInt(0,5), Random.nextInt(0,5))
-            commandImpl.moveItem(i.toString(), randomValues)
-        }
-    }
+fun initializeQuerySide(): Pair<QueryHandler, MutableMap<String, MovingItemDTO>> {
+    val queryModel = mutableMapOf<String, MovingItemDTO>()
+    val queryHandler = QueryHandler(queryModel)
+    return Pair(queryHandler, queryModel)
+}
 
-    commandImpl.createItem("7")
-    for (i in 1..21) {
-        val randomValues = Vector(Random.nextInt(0,5), Random.nextInt(0,5), Random.nextInt(0,5))
-        commandImpl.moveItem("7", randomValues)
+fun startConsumer(connection: Connection, projectionHandler: ProjectionHandler) {
+    val consumer = ActiveMQEventConsumer(connection, projectionHandler)
+    consumer.start()
+}
+
+fun processItems(commandImpl: CommandImpl, itemCount: Int, maxMoves: Int) {
+    (1..itemCount).forEach { itemId ->
+        createAndMoveItem(commandImpl, itemId.toString(), null, maxMoves)
     }
+    createAndMoveItem(commandImpl, "7", moveCount = 20)
 
     val vector = Vector(8, 8, 8)
+    listOf("8", "9", "10").forEach { itemId ->
+        commandImpl.createItem(itemId)
+        commandImpl.moveItem(itemId, vector)
+    }
+}
 
-    commandImpl.createItem("8")
-    commandImpl.moveItem("8", vector)
+fun createAndMoveItem(commandImpl: CommandImpl, itemId: String, moveCount: Int? = null, maxMoves: Int = 5) {
+    commandImpl.createItem(itemId)
+    val count = moveCount ?: Random.nextInt(0, maxMoves)
+    repeat(count) {
+        val randomValues = Vector(Random.nextInt(0, 5), Random.nextInt(0, 5), Random.nextInt(0, 5))
+        commandImpl.moveItem(itemId, randomValues)
+    }
+}
 
-    commandImpl.createItem("9")
-    commandImpl.moveItem("9", vector)
-
-    commandImpl.createItem("10")
-    commandImpl.moveItem("10", vector)
-
-    val queryModel = mutableMapOf<String, MovingItemDTO>()
-    val projectionHandler = ProjectionHandler(eventStore, queryModel)
-
-    projectionHandler.projectEvents()
-
-    val queryHandler = QueryHandler(queryModel)
-
-    queryHandler.getMovingItems().forEach{ dto ->
+fun printQueryResults(queryHandler: QueryHandler) {
+    queryHandler.getMovingItems().forEach { dto ->
         println("Item: ${dto.name}, Location: ${dto.location}, Moves: ${dto.numberOfMoves}, Value: ${dto.value}")
     }
 
-    val specificItem = queryHandler.getMovingItemByName("3")
-    println("Specific item details: $specificItem")
+    println("Specific item details: ${queryHandler.getMovingItemByName("3")}")
 }

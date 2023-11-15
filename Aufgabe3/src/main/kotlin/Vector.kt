@@ -1,4 +1,10 @@
-class Vector(private val x: Int = 0, private val y: Int = 0, private val z: Int = 0) {
+import com.fasterxml.jackson.annotation.JsonProperty
+
+class Vector(
+    @JsonProperty("x") val x: Int = 0,
+    @JsonProperty("y") val y: Int = 0,
+    @JsonProperty("z") val z: Int = 0
+) {
 
     fun add(other: Vector): Vector {
         val newX = this.x + other.x
