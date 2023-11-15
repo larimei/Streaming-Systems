@@ -12,4 +12,5 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 )
 interface MovingItemEvent {
     val id: String
+    val timestamp: Long
 }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import event.MovingItemEvent
 import projection.ProjectionHandler
+import timeDifference
 import javax.jms.*
 
 class ActiveMQEventConsumer(private val connection: Connection, private val projectionHandler: ProjectionHandler) : MessageListener {
@@ -25,6 +26,9 @@ class ActiveMQEventConsumer(private val connection: Connection, private val proj
             if (message is TextMessage) {
                 val json = message.text
                 val event = objectMapper.readValue(json, MovingItemEvent::class.java)
+                val timeDifferenceEvent = System.currentTimeMillis() - event.timestamp
+                println("Event $event needed $timeDifferenceEvent to get to the consumer")
+                timeDifference.add(timeDifferenceEvent)
                 projectionHandler.projectEvent(event)
             }
         } catch (e: Exception) {

@@ -11,6 +11,7 @@ import write.CommandImpl
 import javax.jms.Connection
 import kotlin.random.Random
 
+val timeDifference = mutableListOf<Long>()
 fun main() {
     val connectionProducer = ActiveMQConnectionFactory.instance.createConnection().apply { start() }
     val connectionConsumer = ActiveMQConnectionFactory.instance.createConnection().apply { start() }
@@ -75,4 +76,6 @@ fun printQueryResults(queryHandler: QueryHandler) {
     }
 
     println("Specific item details: ${queryHandler.getMovingItemByName("3")}")
+
+    println("Average time until reaching consumer ${timeDifference.average()}")
 }
