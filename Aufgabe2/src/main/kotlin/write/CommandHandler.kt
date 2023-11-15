@@ -61,7 +61,7 @@ class CommandHandler(private val eventStore: EventStore, private val domainItems
             }
 
             if (itemsAtSamePosition.isNotEmpty()) {
-                println("Already one item at this postion - will be deleted")
+                println("Already one item at this position - will be deleted")
                 itemsAtSamePosition.forEach{(key,value) ->
                     this.handle(DeleteItemCommand(key))
                 }
