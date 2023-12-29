@@ -2,11 +2,14 @@ package write
 
 import MovingItemImpl
 import Vector
+import activemq.ActiveMQConnectionFactory
 import event.*
 import write.command.ChangeValueCommand
 import write.command.CreateItemCommand
 import write.command.DeleteItemCommand
 import write.command.MoveItemCommand
+import javax.jms.Connection
+import javax.jms.Session
 
 
 class CommandHandler(
@@ -64,8 +67,8 @@ class CommandHandler(
             }
 
             if (itemsAtSamePosition.isNotEmpty()) {
-                println("Already one item at this position - will be deleted")
-                itemsAtSamePosition.forEach{(key, _) ->
+                println("Already one item at this postion - will be deleted")
+                itemsAtSamePosition.forEach{(key,value) ->
                     this.handle(DeleteItemCommand(key))
                 }
             }
