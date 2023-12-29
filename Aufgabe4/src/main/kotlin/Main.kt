@@ -1,36 +1,45 @@
 import AppConfig.ITEM_COUNT
 import AppConfig.MAX_MOVES
-import activemq.ActiveMQConnectionFactory
-import activemq.ActiveMQEventConsumer
 import event.EventStoreImpl
+import kafka.KafkaEventConsumer
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.Producer
 import projection.ProjectionHandler
 import read.MovingItemDTO
 import read.QueryHandler
 import write.CommandHandler
 import write.CommandImpl
-import javax.jms.Connection
 import kotlin.random.Random
 
 val timeDifference = mutableListOf<Long>()
 fun main() {
-    val connectionProducer = ActiveMQConnectionFactory.instance.createConnection().apply { start() }
-    val connectionConsumer = ActiveMQConnectionFactory.instance.createConnection().apply { start() }
     try {
-        val commandImpl = initializeCommandSide(connectionProducer)
+        val producerProps = mapOf<String, String>(
+            "bootstrap.servers" to "localhost:9092, localhost:9093, localhost:9094",
+            "key.serializer" to "org.apache.kafka.common.serialization.StringSerializer",
+            "value.serializer" to "org.apache.kafka.common.serialization.StringSerializer",
+            "security.protocol" to "PLAINTEXT"
+        )
+
+        val producer = KafkaProducer<String, String>(producerProps)
+
+        val commandImpl = initializeCommandSide(producer)
+
+
+
         val (queryHandler, queryModel) = initializeQuerySide()
         val projectionHandler = ProjectionHandler(queryModel)
-        startConsumer(connectionConsumer, projectionHandler)
+        startConsumer(projectionHandler)
 
         processItems(commandImpl, ITEM_COUNT, MAX_MOVES)
 
         printQueryResults(queryHandler)
     } finally {
-        connectionConsumer.close()
-        connectionProducer.close()
+
     }
 }
 
-fun initializeCommandSide(connectionProducer: Connection): CommandImpl {
+fun initializeCommandSide(connectionProducer: Producer<String, String>): CommandImpl {
     val eventStore = EventStoreImpl(connectionProducer)
     val domainItems = mutableMapOf<String, MovingItemImpl>()
     val commandHandler = CommandHandler(eventStore, domainItems)
@@ -43,8 +52,8 @@ fun initializeQuerySide(): Pair<QueryHandler, MutableMap<String, MovingItemDTO>>
     return Pair(queryHandler, queryModel)
 }
 
-fun startConsumer(connection: Connection, projectionHandler: ProjectionHandler) {
-    val consumer = ActiveMQEventConsumer(connection, projectionHandler)
+fun startConsumer(projectionHandler: ProjectionHandler) {
+    val consumer = KafkaEventConsumer(projectionHandler)
     consumer.start()
 }
 
