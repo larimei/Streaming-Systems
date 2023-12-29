@@ -34,8 +34,7 @@ fun main() {
 
 fun initializeCommandSide(connectionProducer: Producer<String, String>): CommandImpl {
     val eventStore = EventStoreImpl(connectionProducer)
-    val domainItems = mutableMapOf<String, MovingItemImpl>()
-    val commandHandler = CommandHandler(eventStore, domainItems)
+    val commandHandler = CommandHandler(eventStore)
     return CommandImpl(commandHandler)
 }
 

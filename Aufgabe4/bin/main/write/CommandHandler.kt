@@ -10,43 +10,39 @@ import write.command.MoveItemCommand
 
 
 class CommandHandler(
-    private val eventStore: EventStore,
-    private val domainItems: MutableMap<String, MovingItemImpl>
+    private val eventStore: EventStore
 ) {
     fun handle(createItemCommand: CreateItemCommand) {
-        if(createItemCommand.id in domainItems) {
+        if(createItemCommand.id in eventStore.loadNamesOfMovingItems()) {
             println("Already exists")
             return
         }
 
         val item = MovingItemImpl(createItemCommand.id, createItemCommand.position, createItemCommand.value)
-        domainItems[createItemCommand.id] = item
         eventStore.saveEvent(ItemCreatedEvent(item.getName(), System.currentTimeMillis(), item.getLocation(), item.getValue()))
     }
 
     fun handle(changeValueCommand: ChangeValueCommand) {
-        val item = domainItems[changeValueCommand.id]
+        val item = eventStore.loadNamesOfMovingItems()[changeValueCommand.id]
         if (item == null) {
             println("Item does not exist")
             return
         }
-        item.changeValue(changeValueCommand.newValue)
-        domainItems[changeValueCommand.id] = item
         eventStore.saveEvent(ItemValueChangedEvent(item.getName(), System.currentTimeMillis(), item.getValue()))
     }
 
     fun handle(deleteItemCommand: DeleteItemCommand) {
-        if (deleteItemCommand.id !in domainItems) {
+        if (deleteItemCommand.id !in eventStore.loadNamesOfMovingItems()) {
             println("Item does not exist")
             return
         }
-        domainItems.remove(deleteItemCommand.id)
 
         eventStore.saveEvent(ItemDeletedEvent(deleteItemCommand.id, System.currentTimeMillis()))
     }
 
     fun handle(moveItemCommand: MoveItemCommand) {
-        val item = domainItems[moveItemCommand.id]
+        val items = eventStore.loadNamesOfMovingItems()
+        val item = items[moveItemCommand.id]
         if (item == null) {
             println("Item does not exist")
             return
@@ -59,7 +55,7 @@ class CommandHandler(
 
         if (moveItemCommand.vector != Vector(0,0,0)) {
 
-            val itemsAtSamePosition = domainItems.filterValues { value ->
+            val itemsAtSamePosition = items.filterValues { value ->
                 value.getLocation() == item.getLocation().add(moveItemCommand.vector)
             }
 
@@ -70,11 +66,6 @@ class CommandHandler(
                 }
             }
         }
-
-        item.move(moveItemCommand.vector)
-
-
-        domainItems[moveItemCommand.id] = item
 
         eventStore.saveEvent(ItemMovedEvent(moveItemCommand.id, System.currentTimeMillis(), moveItemCommand.vector))
     }
