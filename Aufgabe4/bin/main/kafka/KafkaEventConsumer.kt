@@ -16,7 +16,7 @@ class KafkaEventConsumer(private val projectionHandler: ProjectionHandler, priva
 
     fun start() {
         val consumerProps = mapOf(
-            "bootstrap.servers" to "localhost:9092, localhost:9093, localhost:9094",
+            "bootstrap.servers" to "localhost:9092",
             "auto.offset.reset" to "earliest",
             "key.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
             "value.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
@@ -43,7 +43,6 @@ class KafkaEventConsumer(private val projectionHandler: ProjectionHandler, priva
                 try {
                     val event = objectMapper.readValue(r.value(), MovingItemEvent::class.java)
                     projectionHandler.projectEvent(event)
-                    printQueryResults(queryHandler)
                 } catch (e: com.fasterxml.jackson.core.JsonParseException) {
                     println("Invalid JSON: ${r.value()}")
                 } catch (e: Exception) {
@@ -51,6 +50,8 @@ class KafkaEventConsumer(private val projectionHandler: ProjectionHandler, priva
                     e.printStackTrace()
                 }
             }
+
+            printQueryResults(queryHandler)
         }
     }
 

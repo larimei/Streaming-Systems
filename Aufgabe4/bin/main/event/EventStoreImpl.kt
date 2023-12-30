@@ -9,9 +9,9 @@ import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import projection.EventHandler
-import read.MovingItemDTO
 import write.MovingItem
 import java.time.Duration
+import java.util.*
 
 class EventStoreImpl(private val producer: Producer<String, String>) : EventStore {
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
@@ -47,23 +47,24 @@ class EventStoreImpl(private val producer: Producer<String, String>) : EventStor
                 e.printStackTrace()
             }
         }
-        return mapOf()
+
+        return eventHandler.getItems()
     }
 
     private fun createConsumer(): ConsumerRecords<String?, String?> {
         val consumerProps = mapOf(
-            "bootstrap.servers" to "localhost:9092, localhost:9093, localhost:9094",
+            "bootstrap.servers" to "localhost:9092",
             "auto.offset.reset" to "earliest",
             "key.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
             "value.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
-            "group.id" to "someGroup",
+            "group.id" to UUID.randomUUID().toString(),
             "security.protocol" to "PLAINTEXT"
         )
 
         val consumer: Consumer<String, String> = KafkaConsumer(consumerProps)
         consumer.subscribe(listOf("StreamingTopic"))
 
-        val duration = Duration.ofMillis(10000)
+        val duration = Duration.ofMillis(100)
         return consumer.poll(duration)
 
     }

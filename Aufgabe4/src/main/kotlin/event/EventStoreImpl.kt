@@ -11,6 +11,7 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import projection.EventHandler
 import write.MovingItem
 import java.time.Duration
+import java.util.*
 
 class EventStoreImpl(private val producer: Producer<String, String>) : EventStore {
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
@@ -46,17 +47,17 @@ class EventStoreImpl(private val producer: Producer<String, String>) : EventStor
                 e.printStackTrace()
             }
         }
-        println(eventHandler.getItems())
+
         return eventHandler.getItems()
     }
 
     private fun createConsumer(): ConsumerRecords<String?, String?> {
         val consumerProps = mapOf(
-            "bootstrap.servers" to "localhost:9092, localhost:9093, localhost:9094",
+            "bootstrap.servers" to "localhost:9092",
             "auto.offset.reset" to "earliest",
             "key.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
             "value.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
-            "group.id" to "getAllItems",
+            "group.id" to UUID.randomUUID().toString(),
             "security.protocol" to "PLAINTEXT"
         )
 

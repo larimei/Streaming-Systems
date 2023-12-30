@@ -12,7 +12,7 @@ import kotlin.random.Random
 fun main() {
     try {
         val producerProps = mapOf(
-            "bootstrap.servers" to "localhost:9092, localhost:9093, localhost:9094",
+            "bootstrap.servers" to "localhost:9092",
             "key.serializer" to "org.apache.kafka.common.serialization.StringSerializer",
             "value.serializer" to "org.apache.kafka.common.serialization.StringSerializer",
             "security.protocol" to "PLAINTEXT"
