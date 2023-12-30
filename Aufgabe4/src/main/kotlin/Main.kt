@@ -22,11 +22,7 @@ fun main() {
 
         val commandImpl = initializeCommandSide(producer)
 
-        val (queryHandler, _) = initializeQuerySide()
-
         processItems(commandImpl, ITEM_COUNT, MAX_MOVES)
-
-        printQueryResults(queryHandler)
     } finally {
 
     }
@@ -39,11 +35,7 @@ fun initializeCommandSide(connectionProducer: Producer<String, String>): Command
 }
 
 
-fun initializeQuerySide(): Pair<QueryHandler, MutableMap<String, MovingItemDTO>> {
-    val queryModel = mutableMapOf<String, MovingItemDTO>()
-    val queryHandler = QueryHandler(queryModel)
-    return Pair(queryHandler, queryModel)
-}
+
 
 fun processItems(commandImpl: CommandImpl, itemCount: Int, maxMoves: Int) {
     (1..itemCount).forEach { itemId ->
@@ -67,14 +59,3 @@ fun createAndMoveItem(commandImpl: CommandImpl, itemId: String, moveCount: Int? 
     }
 }
 
-fun printQueryResults(queryHandler: QueryHandler) {
-    queryHandler.getMovingItems().forEach { dto ->
-        println("Item: ${dto.name}, Location: ${dto.location}, Moves: ${dto.numberOfMoves}, Value: ${dto.value}")
-    }
-
-    try {
-        println("Specific item details: ${queryHandler.getMovingItemByName("3")}")
-    } catch (e: NoSuchElementException) {
-        println("Error: ${e.message}")
-    }
-}

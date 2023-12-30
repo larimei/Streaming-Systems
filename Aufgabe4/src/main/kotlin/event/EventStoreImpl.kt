@@ -9,7 +9,6 @@ import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import projection.EventHandler
-import read.MovingItemDTO
 import write.MovingItem
 import java.time.Duration
 
@@ -47,7 +46,8 @@ class EventStoreImpl(private val producer: Producer<String, String>) : EventStor
                 e.printStackTrace()
             }
         }
-        return mapOf()
+        println(eventHandler.getItems())
+        return eventHandler.getItems()
     }
 
     private fun createConsumer(): ConsumerRecords<String?, String?> {
@@ -56,14 +56,14 @@ class EventStoreImpl(private val producer: Producer<String, String>) : EventStor
             "auto.offset.reset" to "earliest",
             "key.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
             "value.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
-            "group.id" to "someGroup",
+            "group.id" to "getAllItems",
             "security.protocol" to "PLAINTEXT"
         )
 
         val consumer: Consumer<String, String> = KafkaConsumer(consumerProps)
         consumer.subscribe(listOf("StreamingTopic"))
 
-        val duration = Duration.ofMillis(10000)
+        val duration = Duration.ofMillis(100)
         return consumer.poll(duration)
 
     }

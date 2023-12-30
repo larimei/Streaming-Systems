@@ -13,6 +13,10 @@ class EventHandler(private val itemsMap: MutableMap<String, MovingItemImpl>) {
         }
     }
 
+    fun getItems(): MutableMap<String, MovingItemImpl> {
+        return itemsMap
+    }
+
     private fun handleCreatedEvent(event: ItemCreatedEvent) {
         val item = MovingItemImpl(event.id, event.position, event.value)
         itemsMap[event.id] = item

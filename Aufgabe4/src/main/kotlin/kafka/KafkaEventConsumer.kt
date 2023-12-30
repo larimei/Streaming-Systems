@@ -7,10 +7,11 @@ import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import projection.ProjectionHandler
+import read.QueryHandler
 import java.time.Duration
 
 
-class KafkaEventConsumer(private val projectionHandler: ProjectionHandler) {
+class KafkaEventConsumer(private val projectionHandler: ProjectionHandler, private val queryHandler: QueryHandler) {
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
 
     fun start() {
@@ -49,6 +50,20 @@ class KafkaEventConsumer(private val projectionHandler: ProjectionHandler) {
                     e.printStackTrace()
                 }
             }
+
+            printQueryResults(queryHandler)
+        }
+    }
+
+    private fun printQueryResults(queryHandler: QueryHandler) {
+        queryHandler.getMovingItems().forEach { dto ->
+            println("Item: ${dto.name}, Location: ${dto.location}, Moves: ${dto.numberOfMoves}, Value: ${dto.value}")
+        }
+
+        try {
+            println("Specific item details: ${queryHandler.getMovingItemByName("3")}")
+        } catch (e: NoSuchElementException) {
+            println("Error: ${e.message}")
         }
     }
 }
