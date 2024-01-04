@@ -1,3 +1,7 @@
+package generator
+
+import SensorData
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.time.Instant
 import kotlin.math.round
 import kotlin.random.Random
@@ -8,16 +12,16 @@ class DataGenerator(
     private val minSpeed: Double,
     private val maxSpeed: Double,
 ) {
+    private val objectMapper = jacksonObjectMapper()
     fun generateData(): String {
         val timestamp = Instant.now().toString()
         val sensorId = Random.nextInt(1, sensorCount + 1)
         val valueCount = if (Random.nextInt(1, 101) <= GeneratorConfig.NO_VALUES_PROBABILITY) 0
                             else Random.nextInt(1, maxValueCount + 1)
-        val values = (1..valueCount).joinToString(",") {
-            generateSpeed().toString()
-        }
+        val speeds = (1..valueCount).map { generateSpeed() }
 
-        return "$timestamp $sensorId $values"
+        val sensorData = SensorData(timestamp, sensorId, speeds)
+        return objectMapper.writeValueAsString(sensorData)
     }
 
     private fun generateSpeed(): Double {

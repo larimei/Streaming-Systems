@@ -1,3 +1,5 @@
+package generator
+
 object GeneratorConfig {
     const val SENSOR_COUNT = 3
     const val VALUE_COUNT = 3
