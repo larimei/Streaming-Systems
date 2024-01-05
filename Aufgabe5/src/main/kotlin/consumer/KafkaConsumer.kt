@@ -12,7 +12,7 @@ import java.time.temporal.ChronoUnit
 import kotlin.math.round
 
 
-class KafkaConsumer() {
+class KafkaConsumer {
     private val objectMapper = jacksonObjectMapper()
     private val sensorSpeeds = mutableMapOf<Int, MutableList<Double>>()
     private var lastProcessedTime: Instant = Instant.now()
@@ -40,7 +40,7 @@ class KafkaConsumer() {
             for (record in records) {
                 try {
                     val sensorData = objectMapper.readValue(record.value(), SensorData::class.java)
-                    processSensorData(sensorData)
+                    processSensorData(sensorData, record.timestamp())
                 } catch (e: com.fasterxml.jackson.core.JsonParseException) {
                     println("Invalid JSON: ${record.value()}")
                 } catch (e: Exception) {
@@ -51,15 +51,17 @@ class KafkaConsumer() {
         }
     }
 
-    private fun processSensorData(sensorData: SensorData) {
+    private fun processSensorData(sensorData: SensorData, kafkaTimestamp: Long) {
         val validSpeeds = sensorData.speeds.filter { it >= 0 }
         if (validSpeeds.isNotEmpty()) {
-            sensorSpeeds.getOrPut(sensorData.sensorId) { mutableListOf() }.addAll(validSpeeds)
+            val kmSpeeds = validSpeeds.map { round(it * ConsumerConfig.KM_FACTOR* 10) /10.0 }
+            sensorSpeeds.getOrPut(sensorData.sensorId) { mutableListOf() }.addAll(kmSpeeds)
         }
 
-        if (ChronoUnit.SECONDS.between(lastProcessedTime, Instant.now()) >= ConsumerConfig.TIME_WINDOW) {
+        val recordTimestamp = Instant.ofEpochMilli(kafkaTimestamp)
+        if (ChronoUnit.SECONDS.between(lastProcessedTime, recordTimestamp) >= ConsumerConfig.TIME_WINDOW) {
             calculateAndPrintAverages()
-            lastProcessedTime = Instant.now()
+            lastProcessedTime = recordTimestamp
         }
     }
 

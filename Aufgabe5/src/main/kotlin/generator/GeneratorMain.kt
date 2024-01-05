@@ -13,7 +13,6 @@ fun main() {
         "security.protocol" to "PLAINTEXT"
     )
 
-    //val objectMapper: ObjectMapper = jacksonObjectMapper()
     val producer = KafkaProducer<String, String>(producerProps)
 
     val generator = DataGenerator(
