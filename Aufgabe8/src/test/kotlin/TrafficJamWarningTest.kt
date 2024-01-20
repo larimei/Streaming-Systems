@@ -1,8 +1,18 @@
+import models.SensorEvent
+import config.setupEsperRuntime
+import epl.avgSpeedEPL
+import epl.cleanEPL
+import epl.trafficJamWarningEPL
+import listener.AvgSpeedEventListener
+import listener.CleanSensorEventListener
+import listener.TrafficJamWarningEventListener
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
+import utils.compileAndDeploy
+import utils.setupListener
 
 class TrafficJamWarningTest {
 

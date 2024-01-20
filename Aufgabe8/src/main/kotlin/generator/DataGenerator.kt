@@ -1,6 +1,6 @@
 package generator
 
-import SensorEvent
+import models.SensorEvent
 import kotlin.math.round
 import kotlin.random.Random
 
