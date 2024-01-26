@@ -14,7 +14,7 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import org.joda.time.Duration
 import transforms.ConvertToKmh
 import transforms.JSONToSensorData
-import java.util.*
+import transforms.MeanCombineFn
 import kotlin.math.round
 
 
@@ -69,14 +69,8 @@ class KafkaConsumer {
                 GroupByKey.create()
             )
 
-        val averageSpeeds = groupedSensorData.apply(
-            "Calculate Average Speeds",
-            Combine.perKey(SerializableFunction<KV<Int, Iterable<SensorData>>, Double> { input ->
-                val speedsList = input.value.flatMap { it -> it.speeds }
-                speedsList.sum() / speedsList.size
-            }).withInputCoder(SerializableCoder.of(Double::class.java))
-                .withOutputCoder(SerializableCoder.of(Double::class.java))
-        )
+        val averageSpeeds = groupedSensorData
+            .apply("Calculate Average Speeds",  Combine.perKey(MeanCombineFn()))
 
 
 
@@ -84,10 +78,11 @@ class KafkaConsumer {
         averageSpeeds.apply("Print Average Speeds", ParDo.of(object : DoFn<KV<Int, Double>, Void>() {
             @ProcessElement
             fun processElement(@Element input: KV<Int, Double>) {
-                println("Sensor ID: ${input.key}, Average Speed: ${input.value}")
+                println("Sensor ID: ${input.key}, Average Speed: ${round(input.value * 10) / 10.0} kmh")
             }
         }))
 
         pipeline.run()
     }
 }
+

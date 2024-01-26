@@ -13,6 +13,7 @@ class ConvertToKmh : DoFn<SensorData, SensorData>() {
     ) {
         output.output(
             SensorData(
+                input.timestamp,
                 input.sensorId,
                 input.speeds.map { round(it * ConsumerConfig.KM_FACTOR * 10) / 10.0 })
         )

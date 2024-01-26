@@ -20,7 +20,7 @@ class DataGenerator(
                             else Random.nextInt(1, maxValueCount + 1)
         val speeds = (1..valueCount).map { generateSpeed() }
 
-        val sensorData = SensorData(sensorId, speeds)
+        val sensorData = SensorData(timestamp, sensorId, speeds)
         return objectMapper.writeValueAsString(sensorData)
     }
 
