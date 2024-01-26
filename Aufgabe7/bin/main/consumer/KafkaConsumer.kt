@@ -13,6 +13,7 @@ import org.apache.beam.sdk.values.KV
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.joda.time.Duration
 import transforms.JSONToSensorData
+import java.util.*
 import kotlin.math.round
 
 
@@ -52,13 +53,13 @@ class KafkaConsumer {
         val groupedSensorData = windowedSensorData
             .apply(
                 "Extract Sensor ID",
-                ParDo.of(object : DoFn<SensorData, KV<Int, List<Double>>>() {
+                ParDo.of(object : DoFn<SensorData, KV<Int, SensorData>>() {
                     @ProcessElement
                     fun processElement(
                         @Element input: SensorData,
-                        receiver: OutputReceiver<KV<Int, List<Double>>>
+                        receiver: OutputReceiver<KV<Int, SensorData>>
                     ) {
-                        receiver.output(KV.of(input.sensorId, input.speeds))
+                        receiver.output(KV.of(input.sensorId, input))
                     }
                 })
             )
@@ -67,13 +68,24 @@ class KafkaConsumer {
                 GroupByKey.create()
             )
 
-        val averagedSensorData = groupedSensorData
-            .apply(
-                "Calculate Average Speed",
-                Combine.globally(MeanFn())
-            )
+        val averageSpeeds = groupedSensorData.apply(
+            "Calculate Average Speeds",
+            Combine.perKey(SerializableFunction<KV<Int, Iterable<SensorData>>, Double> { input ->
+                val speedsList = input.value.flatMap { it -> it.speeds }
+                speedsList.sum() / speedsList.size
+            }).withInputCoder(SerializableCoder.of(Double::class.java))
+                .withOutputCoder(SerializableCoder.of(Double::class.java))
+        )
 
 
+
+
+        averageSpeeds.apply("Print Average Speeds", ParDo.of(object : DoFn<KV<Int, Double>, Void>() {
+            @ProcessElement
+            fun processElement(@Element input: KV<Int, Double>) {
+                println("Sensor ID: ${input.key}, Average Speed: ${input.value}")
+            }
+        }))
 
         pipeline.run()
     }
@@ -90,14 +102,5 @@ internal class ConvertToKmh : DoFn<SensorData, SensorData>() {
                 input.sensorId,
                 input.speeds.map { round(it * ConsumerConfig.KM_FACTOR * 10) / 10.0 })
         )
-    }
-}
-
-class MeanFn : SerializableFunction<KV<Int, Iterable<List<Double>>>, Double> {
-    override fun apply(input: KV<Int, Iterable<List<Double>>>): Double {
-        val speeds = input.value.flatten()
-        val sum = speeds.sum()
-        val count = speeds.count().toDouble()
-        return if (count > 0) sum / count else 0.0
     }
 }
