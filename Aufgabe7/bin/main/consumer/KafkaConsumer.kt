@@ -2,82 +2,112 @@ package consumer
 
 import AppConfig
 import SensorData
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import org.apache.kafka.clients.consumer.Consumer
-import org.apache.kafka.clients.consumer.ConsumerRecords
-import org.apache.kafka.clients.consumer.KafkaConsumer
-import java.time.Duration
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+import org.apache.beam.sdk.Pipeline
+import org.apache.beam.sdk.coders.SerializableCoder
+import org.apache.beam.sdk.io.kafka.KafkaIO
+import org.apache.beam.sdk.options.PipelineOptionsFactory
+import org.apache.beam.sdk.transforms.*
+import org.apache.beam.sdk.transforms.windowing.FixedWindows
+import org.apache.beam.sdk.transforms.windowing.Window
+import org.apache.beam.sdk.values.KV
+import org.apache.beam.sdk.values.PCollection
+import org.apache.kafka.common.serialization.StringDeserializer
+import org.joda.time.Duration
+import transforms.JSONToSensorData
 import kotlin.math.round
 
 
 class KafkaConsumer {
-    private val objectMapper = jacksonObjectMapper()
-    private val sensorSpeeds = mutableMapOf<Int, MutableList<Double>>()
-    private var lastProcessedTime: Instant = Instant.now()
-    private var counter = 1
-
     fun start() {
-        val consumerProps = mapOf(
-            "bootstrap.servers" to "localhost:9092",
-            "key.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
-            "value.deserializer" to "org.apache.kafka.common.serialization.StringDeserializer",
-            "group.id" to "someGroup",
-            "security.protocol" to "PLAINTEXT"
+
+        val options = PipelineOptionsFactory.create()
+        val pipeline: Pipeline = Pipeline.create(options)
+
+        val kafkaRead = KafkaIO.read<String, String>().withBootstrapServers("localhost:9092")
+            .withKeyDeserializer(StringDeserializer::class.java).withValueDeserializer(StringDeserializer::class.java)
+            .withTopic(AppConfig.TOPIC)
+
+        val kafkaRecords = pipeline.apply("Read from Kafka", kafkaRead)
+
+
+        val sensorDataRecords = kafkaRecords.apply(
+            "JSON",
+            ParDo.of(JSONToSensorData())
+        ).setCoder(SerializableCoder.of(SensorData::class.java))
+
+        val validSensorData =
+            sensorDataRecords.apply(Filter.by(SerializableFunction { sensorData ->
+                sensorData != null && sensorData.speeds.all { it >= 0 }
+            }))
+
+        val sensorDataInKmh = validSensorData.apply(
+            "Convert to km/h", ParDo.of(ConvertToKmh())
         )
 
-        val consumer: Consumer<String, String> = KafkaConsumer(consumerProps)
-        consumer.subscribe(listOf(AppConfig.TOPIC))
-        listen(consumer)
+        val groupedSensorData = sensorDataInKmh
+            .apply(
+                "Extract Sensor ID",
+                ParDo.of(object : DoFn<SensorData, KV<Int, SensorData>>() {
+                    @ProcessElement
+                    fun processElement(
+                        @Element input: SensorData,
+                        receiver: OutputReceiver<KV<Int, SensorData>>
+                    ) {
+                        receiver.output(KV.of(input.sensorId, input))
+                    }
+                })
+            )
+            .apply(
+                "Group by Sensor ID",
+                GroupByKey.create()
+            )
+
+        val windowedSensorData = groupedSensorData.apply(
+            "Window intervals",
+            Window.into(FixedWindows.of(Duration.standardSeconds(ConsumerConfig.TIME_WINDOW.toLong())))
+        )
+
+        val averagedSensorData = windowedSensorData
+            .apply(
+                "Calculate Average Speed",
+                Combine.globally(MeanFn())
+            )
+
+
+
+        pipeline.run()
     }
+}
 
-    private fun listen(consumer: Consumer<String, String>) {
-        val duration = Duration.ofMillis(10000)
 
-        while (true) {
-            val records: ConsumerRecords<String?, String?> = consumer.poll(duration)
-            for (record in records) {
-                try {
-                    val sensorData = objectMapper.readValue(record.value(), SensorData::class.java)
-                    processSensorData(sensorData, record.timestamp())
-                } catch (e: com.fasterxml.jackson.core.JsonParseException) {
-                    println("Invalid JSON: ${record.value()}")
-                } catch (e: Exception) {
-                    println("Error processing record: ${record.value()}")
-                    e.printStackTrace()
-                }
-            }
-        }
+internal class ConvertToKmh : DoFn<SensorData, SensorData>() {
+    @ProcessElement
+    fun processElement(
+        @Element input: SensorData, output: OutputReceiver<SensorData>
+    ) {
+        output.output(
+            SensorData(
+                input.sensorId,
+                input.speeds.map { round(it * ConsumerConfig.KM_FACTOR * 10) / 10.0 })
+        )
     }
+}
 
-    private fun processSensorData(sensorData: SensorData, kafkaTimestamp: Long) {
-        val validSpeeds = sensorData.speeds.filter { it >= 0 }
-        if (validSpeeds.isNotEmpty()) {
-            val kmSpeeds = validSpeeds.map { round(it * ConsumerConfig.KM_FACTOR* 10) /10.0 }
-            sensorSpeeds.getOrPut(sensorData.sensorId) { mutableListOf() }.addAll(kmSpeeds)
-        }
-
-        val recordTimestamp = Instant.ofEpochMilli(kafkaTimestamp)
-        if (ChronoUnit.SECONDS.between(lastProcessedTime, recordTimestamp) >= ConsumerConfig.TIME_WINDOW) {
-            calculateAndPrintAverages()
-            lastProcessedTime = recordTimestamp
-        }
+class MeanFn : SerializableFunction<Iterable<SensorData>, Double> {
+    override fun apply(input: Iterable<SensorData>): Double {
+        val speeds = input.flatMap { it.speeds }
+        val sum = speeds.sum()
+        val count = speeds.count().toDouble()
+        return if (count > 0) sum / count else 0.0
     }
+}
 
-    private fun calculateAndPrintAverages() {
-        println("---------------------------------------------")
-        println("${ConsumerConfig.TIME_WINDOW}s passed ${counter}. data is available" )
-        counter++
-        sensorSpeeds.forEach { (sensorId, speeds) ->
-            val averageSpeed = if (speeds.isNotEmpty()) {
-                round(speeds.average() * 10) / 10.0
-            } else {
-                0.0
-            }
-            println("Sensor $sensorId: average speed = $averageSpeed km/h")
-            println("With those speeds: $speeds")
+class SumInts : SerializableFunction<Iterable<Int>, Int> {
+    override fun apply(input: Iterable<Int>): Int {
+        var sum = 0
+        for (item in input) {
+            sum += item
         }
-        sensorSpeeds.clear()
+        return sum
     }
 }

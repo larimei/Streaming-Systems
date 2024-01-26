@@ -10,9 +10,12 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    maven(url = "https://packages.confluent.io/maven/")
 }
 
 dependencies {
+    implementation ("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
+
     implementation ("ch.qos.logback:logback-classic:1.4.11")
     implementation ("com.fasterxml.jackson.core:jackson-databind:2.15.3")
     implementation ("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.3")
@@ -24,6 +27,10 @@ dependencies {
 
     testImplementation ("org.mockito:mockito-core:3.6.28")
     testImplementation ("org.mockito:mockito-inline:3.6.28")
+
+    implementation ("org.apache.beam:beam-sdks-java-io-kafka:2.53.0")
+    implementation ("org.apache.beam:beam-runners-direct-java:2.53.0")
+
 }
 
 tasks.test {
