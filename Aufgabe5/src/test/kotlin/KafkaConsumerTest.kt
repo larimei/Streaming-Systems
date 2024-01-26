@@ -8,7 +8,6 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 
 class KafkaConsumerTest {
-
     @Test
     fun `test private method processSensorData for speed conversion`() {
         val kafkaConsumer = KafkaConsumer()

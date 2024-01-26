@@ -27,7 +27,7 @@ class ActiveMQEventConsumer(private val connection: Connection, private val proj
                 val json = message.text
                 val event = objectMapper.readValue(json, MovingItemEvent::class.java)
                 val timeDifferenceEvent = System.currentTimeMillis() - event.timestamp
-                println("Event $event needed $timeDifferenceEvent to get to the consumer")
+                println("Event $event needed $timeDifferenceEvent ms to get to the consumer")
                 timeDifference.add(timeDifferenceEvent)
                 projectionHandler.projectEvent(event)
             }

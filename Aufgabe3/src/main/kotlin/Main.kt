@@ -77,5 +77,6 @@ fun printQueryResults(queryHandler: QueryHandler) {
 
     println("Specific item details: ${queryHandler.getMovingItemByName("3")}")
 
-    println("Average time until reaching consumer ${timeDifference.average()}")
+    val timeAverage = timeDifference.average()
+    println("Average time until reaching consumer ${Math.round(timeAverage * 100) / 100.0} ms")
 }

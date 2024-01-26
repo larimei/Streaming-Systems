@@ -36,10 +36,13 @@ class KafkaConsumer {
             ParDo.of(JSONToSensorData())
         ).setCoder(SerializableCoder.of(SensorData::class.java))
 
-        val validSensorData =
-            sensorDataRecords.apply(Filter.by(SerializableFunction { sensorData ->
-                sensorData != null && sensorData.speeds.all { it >= 0 }
-            }))
+        val validSensorData = sensorDataRecords.apply("Filter Negative and Zero Speeds", ParDo.of(object : DoFn<SensorData, SensorData>() {
+            @ProcessElement
+            fun processElement(@Element sensorData: SensorData, output: OutputReceiver<SensorData>) {
+                val filteredSpeeds = sensorData.speeds.filter { it > 0 }
+                output.output(SensorData(sensorData.timestamp, sensorData.sensorId, filteredSpeeds))
+            }
+        }))
 
         val sensorDataInKmh = validSensorData.apply(
             "Convert to km/h", ParDo.of(ConvertToKmh())
