@@ -10,7 +10,6 @@ import org.apache.beam.sdk.transforms.*
 import org.apache.beam.sdk.transforms.windowing.FixedWindows
 import org.apache.beam.sdk.transforms.windowing.Window
 import org.apache.beam.sdk.values.KV
-import org.apache.beam.sdk.values.PCollection
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.joda.time.Duration
 import transforms.JSONToSensorData
@@ -44,16 +43,22 @@ class KafkaConsumer {
             "Convert to km/h", ParDo.of(ConvertToKmh())
         )
 
-        val groupedSensorData = sensorDataInKmh
+
+        val windowedSensorData = sensorDataInKmh.apply(
+            "Window intervals",
+            Window.into(FixedWindows.of(Duration.standardSeconds(ConsumerConfig.TIME_WINDOW.toLong())))
+        )
+
+        val groupedSensorData = windowedSensorData
             .apply(
                 "Extract Sensor ID",
-                ParDo.of(object : DoFn<SensorData, KV<Int, SensorData>>() {
+                ParDo.of(object : DoFn<SensorData, KV<Int, List<Double>>>() {
                     @ProcessElement
                     fun processElement(
                         @Element input: SensorData,
-                        receiver: OutputReceiver<KV<Int, SensorData>>
+                        receiver: OutputReceiver<KV<Int, List<Double>>>
                     ) {
-                        receiver.output(KV.of(input.sensorId, input))
+                        receiver.output(KV.of(input.sensorId, input.speeds))
                     }
                 })
             )
@@ -62,12 +67,7 @@ class KafkaConsumer {
                 GroupByKey.create()
             )
 
-        val windowedSensorData = groupedSensorData.apply(
-            "Window intervals",
-            Window.into(FixedWindows.of(Duration.standardSeconds(ConsumerConfig.TIME_WINDOW.toLong())))
-        )
-
-        val averagedSensorData = windowedSensorData
+        val averagedSensorData = groupedSensorData
             .apply(
                 "Calculate Average Speed",
                 Combine.globally(MeanFn())
@@ -93,21 +93,11 @@ internal class ConvertToKmh : DoFn<SensorData, SensorData>() {
     }
 }
 
-class MeanFn : SerializableFunction<Iterable<SensorData>, Double> {
-    override fun apply(input: Iterable<SensorData>): Double {
-        val speeds = input.flatMap { it.speeds }
+class MeanFn : SerializableFunction<KV<Int, Iterable<List<Double>>>, Double> {
+    override fun apply(input: KV<Int, Iterable<List<Double>>>): Double {
+        val speeds = input.value.flatten()
         val sum = speeds.sum()
         val count = speeds.count().toDouble()
         return if (count > 0) sum / count else 0.0
-    }
-}
-
-class SumInts : SerializableFunction<Iterable<Int>, Int> {
-    override fun apply(input: Iterable<Int>): Int {
-        var sum = 0
-        for (item in input) {
-            sum += item
-        }
-        return sum
     }
 }
