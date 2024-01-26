@@ -12,6 +12,7 @@ import org.apache.beam.sdk.transforms.windowing.Window
 import org.apache.beam.sdk.values.KV
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.joda.time.Duration
+import transforms.ConvertToKmh
 import transforms.JSONToSensorData
 import java.util.*
 import kotlin.math.round
@@ -88,19 +89,5 @@ class KafkaConsumer {
         }))
 
         pipeline.run()
-    }
-}
-
-
-internal class ConvertToKmh : DoFn<SensorData, SensorData>() {
-    @ProcessElement
-    fun processElement(
-        @Element input: SensorData, output: OutputReceiver<SensorData>
-    ) {
-        output.output(
-            SensorData(
-                input.sensorId,
-                input.speeds.map { round(it * ConsumerConfig.KM_FACTOR * 10) / 10.0 })
-        )
     }
 }
