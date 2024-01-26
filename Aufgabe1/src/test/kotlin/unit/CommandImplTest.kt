@@ -3,13 +3,13 @@ package unit
 import MovingItemImpl
 import Vector
 import event.EventStore
+import event.EventStoreImpl
 import event.ItemMovedEvent
 import event.MovingItemEvent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.*
 import write.CommandHandler
 import write.CommandImpl
 import java.util.concurrent.LinkedBlockingQueue
@@ -24,7 +24,7 @@ class CommandImplTest {
 
     @BeforeEach
     fun setUp() {
-        eventStore = EventStore(eventQueue)
+        eventStore = EventStoreImpl(eventQueue)
         commandHandler = CommandHandler(eventStore, domainItems)
         commandImpl = CommandImpl(commandHandler)
     }

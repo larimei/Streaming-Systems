@@ -3,6 +3,7 @@ package integration
 import MovingItemImpl
 import Vector
 import event.EventStore
+import event.EventStoreImpl
 import event.MovingItemEvent
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
@@ -18,7 +19,7 @@ class SystemIntegrationTest {
     fun `moveItem reflects in QueryModel after projection`() {
 
         val eventQueue = LinkedBlockingQueue<MovingItemEvent>()
-        val eventStore = EventStore(eventQueue)
+        val eventStore = EventStoreImpl(eventQueue)
         val domainItems = mutableMapOf<String, MovingItemImpl>()
         val commandHandler = CommandHandler(eventStore, domainItems)
         val commandImpl = CommandImpl(commandHandler)

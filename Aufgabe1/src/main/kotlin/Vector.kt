@@ -1,5 +1,4 @@
 class Vector(private val x: Int = 0, private val y: Int = 0, private val z: Int = 0) {
-
     fun add(other: Vector): Vector {
         val newX = this.x + other.x
         val newY = this.y + other.y
