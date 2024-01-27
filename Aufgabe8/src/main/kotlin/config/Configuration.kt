@@ -1,17 +1,15 @@
 package config
 
-import models.TrafficJamWarningEvent
 import com.espertech.esper.common.client.configuration.Configuration
 import com.espertech.esper.runtime.client.EPRuntime
 import com.espertech.esper.runtime.client.EPRuntimeProvider
-import models.AvgSpeedSensorEvent
-import models.CleanSensorEvent
-import models.SensorEvent
+import models.*
 
 fun setupEsperRuntime(): EPRuntime {
     val configuration = Configuration().apply {
         common.addEventType("SensorEvent", SensorEvent::class.java)
         common.addEventType("CleanSensorEvent", CleanSensorEvent::class.java)
+        common.addEventType("ValueConversionEvent", ValueConversionEvent::class.java)
         common.addEventType("AvgSpeedSensorEvent", AvgSpeedSensorEvent::class.java)
         common.addEventType("TrafficJamWarningEvent", TrafficJamWarningEvent::class.java)
     }

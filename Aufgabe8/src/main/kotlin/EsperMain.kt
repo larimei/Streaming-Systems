@@ -3,11 +3,13 @@ import config.setupEsperRuntime
 import epl.avgSpeedEPL
 import epl.cleanEPL
 import epl.trafficJamWarningEPL
+import epl.valueConversionEPL
 import generator.DataGenerator
 import generator.GeneratorConfig
 import listener.AvgSpeedEventListener
 import listener.CleanSensorEventListener
 import listener.TrafficJamWarningEventListener
+import listener.ValueConversionListener
 import utils.compileAndDeploy
 import utils.setupListener
 import kotlin.random.Random
@@ -17,6 +19,9 @@ fun main() {
 
     val cleanDeployment = compileAndDeploy(runtime, cleanEPL())
     setupListener(runtime, cleanDeployment, "CleanEvents", CleanSensorEventListener())
+
+    val valueConversionDeployment = compileAndDeploy(runtime, valueConversionEPL())
+    setupListener(runtime, valueConversionDeployment, "ValueConversionCalculation", ValueConversionListener())
 
     val avgSpeedDeployment = compileAndDeploy(runtime, avgSpeedEPL())
     setupListener(runtime, avgSpeedDeployment, "AvgSpeedCalculation", AvgSpeedEventListener())

@@ -3,9 +3,12 @@ import config.setupEsperRuntime
 import epl.avgSpeedEPL
 import epl.cleanEPL
 import epl.trafficJamWarningEPL
+import epl.valueConversionEPL
 import listener.AvgSpeedEventListener
 import listener.CleanSensorEventListener
 import listener.TrafficJamWarningEventListener
+import listener.ValueConversionListener
+import models.ValueConversionEvent
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
@@ -23,6 +26,9 @@ class TrafficJamWarningTest {
         val cleanDeployment = compileAndDeploy(runtime, cleanEPL())
         setupListener(runtime, cleanDeployment, "CleanEvents", CleanSensorEventListener())
 
+        val valueConversionDeployment = compileAndDeploy(runtime, valueConversionEPL())
+        setupListener(runtime, valueConversionDeployment, "ValueConversionCalculation", ValueConversionListener())
+
         val avgSpeedDeployment = compileAndDeploy(runtime, avgSpeedEPL())
         setupListener(runtime, avgSpeedDeployment, "AvgSpeedCalculation", AvgSpeedEventListener())
 
@@ -35,12 +41,12 @@ class TrafficJamWarningTest {
             trafficJamWarningListenerMock
         )
 
-        runtime.eventService.sendEventBean(SensorEvent(1, listOf(20.0, 21.0, 22.0)), "SensorEvent")
-        runtime.eventService.sendEventBean(SensorEvent(2, listOf(20.0, 21.0, 22.0)), "SensorEvent")
+        runtime.eventService.sendEventBean(ValueConversionEvent(1, 70.0), "ValueConversionEvent")
+        runtime.eventService.sendEventBean(ValueConversionEvent(2, 70.0), "ValueConversionEvent")
         Thread.sleep(11000)
 
-        runtime.eventService.sendEventBean(SensorEvent(1, listOf(10.0, 11.0, 12.0)), "SensorEvent")
-        runtime.eventService.sendEventBean(SensorEvent(2, listOf(20.0, 21.0, 22.0)), "SensorEvent")
+        runtime.eventService.sendEventBean(ValueConversionEvent(1, 30.0), "ValueConversionEvent")
+        runtime.eventService.sendEventBean(ValueConversionEvent(2, 60.0), "ValueConversionEvent")
         Thread.sleep(11000)
 
         verify(trafficJamWarningListenerMock, times(1)).update(any(), any(), any(), any())
